@@ -2,109 +2,125 @@ import SwiftUI
 
 struct DashboardView: View {
     @ObservedObject var statsManager: SystemStatsManager
+    @ObservedObject var claudeManager: ClaudeCodeManager
+    @State private var selectedTab: DashboardTab = .system
 
     var body: some View {
         VStack(spacing: 0) {
             // Header with gradient accent
             headerSection
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 10) {
-                    // CPU & GPU side by side
-                    HStack(spacing: 10) {
-                        StatCard(
-                            title: "CPU",
-                            value: String(format: "%.1f%%", statsManager.cpuUsage),
-                            icon: "cpu.fill",
-                            color: colorForPercent(statsManager.cpuUsage),
-                            percent: statsManager.cpuUsage
-                        )
-                        StatCard(
-                            title: "GPU",
-                            value: String(format: "%.1f%%", statsManager.gpuUsage),
-                            icon: "rectangle.3.group.fill",
-                            color: colorForPercent(statsManager.gpuUsage),
-                            percent: statsManager.gpuUsage
-                        )
-                    }
-
-                    // Memory - full width
-                    StatCard(
-                        title: "Memory",
-                        value: "\(formatBytes(statsManager.memoryUsed)) / \(formatBytes(statsManager.memoryTotal))",
-                        icon: "memorychip.fill",
-                        color: colorForPercent(statsManager.memoryUsage),
-                        percent: statsManager.memoryUsage
-                    )
-
-                    // Network I/O
-                    HStack(spacing: 10) {
-                        NetworkCard(
-                            title: "Download",
-                            value: formatBytesPerSec(statsManager.networkInRate),
-                            icon: "arrow.down.circle.fill",
-                            color: Color(red: 0.3, green: 0.6, blue: 1.0)
-                        )
-                        NetworkCard(
-                            title: "Upload",
-                            value: formatBytesPerSec(statsManager.networkOutRate),
-                            icon: "arrow.up.circle.fill",
-                            color: Color(red: 1.0, green: 0.6, blue: 0.3)
-                        )
-                    }
-
-                    // Load Average with visual indicator
-                    LoadCard(load: statsManager.loadAverage)
-
-                    // Battery (if present)
-                    if statsManager.hasBattery {
-                        BatteryCard(
-                            level: statsManager.batteryLevel,
-                            charging: statsManager.batteryCharging
-                        )
-                    }
-
-                    // Processes section
-                    ProcessesCard(processes: statsManager.topProcesses)
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
+            // Tab content
+            if selectedTab == .system {
+                systemTabContent
+            } else {
+                ClaudeCodeView(claudeManager: claudeManager)
             }
 
             // Footer
             footerSection
         }
-        .frame(width: 320, height: 500)
+        .frame(width: 320, height: 520)
         .background(Color(NSColor.windowBackgroundColor))
     }
 
-    private var headerSection: some View {
-        HStack(alignment: .center) {
-            HStack(spacing: 6) {
-                Image(systemName: "chart.bar.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.green, .cyan],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+    private var systemTabContent: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 10) {
+                // CPU & GPU side by side
+                HStack(spacing: 10) {
+                    StatCard(
+                        title: "CPU",
+                        value: String(format: "%.1f%%", statsManager.cpuUsage),
+                        icon: "cpu.fill",
+                        color: colorForPercent(statsManager.cpuUsage),
+                        percent: statsManager.cpuUsage
                     )
-                Text("System Pulse")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    StatCard(
+                        title: "GPU",
+                        value: String(format: "%.1f%%", statsManager.gpuUsage),
+                        icon: "rectangle.3.group.fill",
+                        color: colorForPercent(statsManager.gpuUsage),
+                        percent: statsManager.gpuUsage
+                    )
+                }
+
+                // Memory - full width
+                StatCard(
+                    title: "Memory",
+                    value: "\(formatBytes(statsManager.memoryUsed)) / \(formatBytes(statsManager.memoryTotal))",
+                    icon: "memorychip.fill",
+                    color: colorForPercent(statsManager.memoryUsage),
+                    percent: statsManager.memoryUsage
+                )
+
+                // Network I/O
+                HStack(spacing: 10) {
+                    NetworkCard(
+                        title: "Download",
+                        value: formatBytesPerSec(statsManager.networkInRate),
+                        icon: "arrow.down.circle.fill",
+                        color: Color(red: 0.3, green: 0.6, blue: 1.0)
+                    )
+                    NetworkCard(
+                        title: "Upload",
+                        value: formatBytesPerSec(statsManager.networkOutRate),
+                        icon: "arrow.up.circle.fill",
+                        color: Color(red: 1.0, green: 0.6, blue: 0.3)
+                    )
+                }
+
+                // Load Average with visual indicator
+                LoadCard(load: statsManager.loadAverage)
+
+                // Battery (if present)
+                if statsManager.hasBattery {
+                    BatteryCard(
+                        level: statsManager.batteryLevel,
+                        charging: statsManager.batteryCharging
+                    )
+                }
+
+                // Processes section
+                ProcessesCard(processes: statsManager.topProcesses)
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+        }
+    }
+
+    private var headerSection: some View {
+        VStack(spacing: 8) {
+            HStack(alignment: .center) {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.green, .cyan],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Text("System Pulse")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                    Text(uptimeString)
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
             }
 
-            Spacer()
-
-            HStack(spacing: 4) {
-                Image(systemName: "clock")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
-                Text(uptimeString)
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(.secondary)
-            }
+            // Tab selector
+            TabSelectorView(selectedTab: $selectedTab)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -112,21 +128,54 @@ struct DashboardView: View {
     }
 
     private var footerSection: some View {
-        Button(action: {
-            NSApplication.shared.terminate(nil)
-        }) {
-            HStack(spacing: 4) {
-                Image(systemName: "power")
-                    .font(.system(size: 10, weight: .medium))
-                Text("Quit")
-                    .font(.system(size: 11, weight: .medium))
+        HStack(spacing: 0) {
+            Button(action: {
+                openMainWindow()
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "macwindow")
+                        .font(.system(size: 10, weight: .medium))
+                    Text("Open Dashboard")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundColor(.accentColor)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
             }
-            .foregroundColor(.secondary)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity)
+            .buttonStyle(.plain)
+
+            Divider()
+                .frame(height: 20)
+
+            Button(action: {
+                NSApplication.shared.terminate(nil)
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "power")
+                        .font(.system(size: 10, weight: .medium))
+                    Text("Quit")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundColor(.secondary)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
         .background(Color(NSColor.separatorColor).opacity(0.1))
+    }
+
+    private func openMainWindow() {
+        // Find and show the main window, or create one if needed
+        for window in NSApp.windows {
+            if window.canBecomeMain && !window.title.isEmpty {
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+                return
+            }
+        }
+        // If no main window exists, activate the app to create one
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private var uptimeString: String {

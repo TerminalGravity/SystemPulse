@@ -4,26 +4,50 @@ import AppKit
 @main
 struct SystemPulseApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var statsManager = SystemStatsManager()
+    @StateObject private var claudeManager = ClaudeCodeManager()
+    @StateObject private var licenseManager = LicenseManager.shared
 
     var body: some Scene {
-        Settings {
-            EmptyView()
+        WindowGroup {
+            MainWindowView()
+                .environmentObject(statsManager)
+                .environmentObject(claudeManager)
+                .environmentObject(licenseManager)
+                .onAppear {
+                    // Share managers with AppDelegate
+                    appDelegate.statsManager = statsManager
+                    appDelegate.claudeManager = claudeManager
+                    appDelegate.licenseManager = licenseManager
+                    // Start updates
+                    statsManager.refresh()
+                    claudeManager.refresh()
+                }
+        }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 600, height: 650)
+        .commands {
+            CommandGroup(replacing: .newItem) { }
         }
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var statusItem: NSStatusItem!
     var popover: NSPopover!
     var statsManager: SystemStatsManager!
+    var claudeManager: ClaudeCodeManager!
     var licenseManager: LicenseManager!
     var updateTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        // Regular app - shows in dock AND menubar
+        NSApp.setActivationPolicy(.regular)
 
-        licenseManager = LicenseManager.shared
-        statsManager = SystemStatsManager()
+        // Use shared instance if not already set by App struct
+        if licenseManager == nil { licenseManager = LicenseManager.shared }
+        if statsManager == nil { statsManager = SystemStatsManager() }
+        if claudeManager == nil { claudeManager = ClaudeCodeManager() }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
@@ -51,6 +75,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         statsManager.refresh()
+        claudeManager.refresh()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        // When dock icon is clicked, show or create main window
+        if !flag {
+            for window in NSApp.windows {
+                if window.canBecomeMain {
+                    window.makeKeyAndOrderFront(self)
+                    return true
+                }
+            }
+        }
+        return true
     }
 
     @objc func licenseStatusChanged() {
@@ -62,9 +100,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func updatePopoverContent() {
         if licenseManager.isLicensed {
-            popover.contentSize = NSSize(width: 320, height: 500)
+            popover.contentSize = NSSize(width: 320, height: 520)
             popover.contentViewController = NSHostingController(
-                rootView: DashboardView(statsManager: statsManager)
+                rootView: DashboardView(statsManager: statsManager, claudeManager: claudeManager)
             )
         } else {
             popover.contentSize = NSSize(width: 280, height: 380)
@@ -78,6 +116,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         updateTimer?.invalidate()
         updateTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             self?.statsManager.refresh()
+            self?.claudeManager.refresh()
             self?.updateMenuBarIcon()
         }
     }
@@ -118,6 +157,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else if let button = statusItem.button {
             if licenseManager.isLicensed {
                 statsManager.refresh()
+                claudeManager.refresh()
             }
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             NSApp.activate(ignoringOtherApps: true)
