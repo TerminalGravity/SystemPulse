@@ -75,7 +75,7 @@ struct LicenseView: View {
                 .disabled(email.isEmpty || licenseKey.isEmpty || isActivating)
 
                 Button(action: openPurchasePage) {
-                    Text("Buy License - $1.99")
+                    Text("Buy License - $9.99")
                         .font(.system(size: 12))
                 }
                 .buttonStyle(.link)
@@ -117,7 +117,8 @@ struct LicenseView: View {
     }
 
     private func openPurchasePage() {
-        if let url = URL(string: "https://systempulse.app") {
+        // TODO: Replace with your LemonSqueezy/Gumroad checkout URL
+        if let url = URL(string: "https://systempulse-site.vercel.app#pricing") {
             NSWorkspace.shared.open(url)
         }
     }
