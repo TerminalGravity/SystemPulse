@@ -117,8 +117,11 @@ struct LicenseView: View {
     }
 
     private func openPurchasePage() {
-        // TODO: Replace with your LemonSqueezy/Gumroad checkout URL
-        if let url = URL(string: "https://systempulse-site.vercel.app#pricing") {
+        let subject = "SystemPulse Pro License Purchase"
+        let body = "Hi Jack,\n\nI'd like to purchase a SystemPulse Pro license for $9.99.\n\nMy email for the license: [YOUR EMAIL]\n\nThanks!"
+        let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "mailto:jrinnfelke@gmail.com?subject=\(encodedSubject)&body=\(encodedBody)") {
             NSWorkspace.shared.open(url)
         }
     }
